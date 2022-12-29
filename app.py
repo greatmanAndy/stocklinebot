@@ -59,6 +59,10 @@ def handle_message(event):
         # mes = contuin_divided(message[5:])
         dividend_one = average_dividend(message[5:])
         line_bot_api.reply_message(event.reply_token,dividend_one)
+    elif re.match("歷年股利",message):
+        # mes = contuin_divided(message[5:])
+        dividend_year = year_dividend(message[5:])
+        line_bot_api.reply_message(event.reply_token,dividend_year)
     elif "股票" in message:
         button_template_message = TemplateSendMessage(
         alt_text= "股票資訊",
@@ -152,3 +156,6 @@ import os
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
+
+
