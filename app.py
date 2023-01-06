@@ -9,6 +9,7 @@ import re
 from blog import *
 from news import *
 from stock import *
+from use import *
 
 
 app = Flask(__name__)
@@ -111,46 +112,56 @@ def handle_message(event):
             )
         )
         line_bot_api.reply_message(event.reply_token,button_template_message)
-    else:
-        line_bot_api.reply_message(event.reply_token,TemplateSendMessage(message))
-    
-    
-   
-    # if "大戶籌碼" in message:
-    #     flex_message = TextSendMessage(text="請選擇要顯示的買賣超資訊",
-    #                                 quick_reply=QuickReply(items=[
-    #                                     QuickReplyButton(action=MessageAction(label="最新法人",text="最新法人買賣超" + message[5:])),
-    #                                     QuickReplyButton(action=MessageAction(label="歷年法人",text="歷年法人買賣超" + message[5:])),
-    #                                     QuickReplyButton(action=MessageAction(label="外資",text="外資買賣超" + message[5:])),
-    #                                     QuickReplyButton(action=MessageAction(label="投信",text="投信買賣超" + message[5:])),
-    #                                     QuickReplyButton(action=MessageAction(label="自營商",text="自營商買賣超" + message[5:])),
-    #                                     QuickReplyButton(action=MessageAction(label="三大法人",text="三大法人買賣超" + message[5:]))
-    #                                 ])
-    #     )
-    #     line_bot_api.reply_message(event.reply_token, flex_message)
     # else:
-    #     line_bot_api.reply_message(event.reply_token, TemplateSendMessage(message))
+    #     line_bot_api.reply_message(event.reply_token,TemplateSendMessage(message))
+ 
+    elif "大戶籌碼" in message:
+        st = message[4:]
+        flex_message = TextSendMessage(text="請選擇要顯示的買賣超資訊",
+                                    quick_reply=QuickReply(items=[
+                                        QuickReplyButton(action=MessageAction(label="最新法人",text="最新法人買賣超" + st)),
+                                        QuickReplyButton(action=MessageAction(label="歷年法人",text="歷年法人買賣超" + st)),
+                                        QuickReplyButton(action=MessageAction(label="外資",text="外資買賣超" + st)),
+                                        QuickReplyButton(action=MessageAction(label="投信",text="投信買賣超" + st)),
+                                        QuickReplyButton(action=MessageAction(label="自營商",text="自營商買賣超" + st)),
+                                        QuickReplyButton(action=MessageAction(label="三大法人",text="三大法人買賣超" + st))
+                                    ])
+        )
+        line_bot_api.reply_message(event.reply_token, flex_message)
+    elif "最新法人買賣超 " in message:
+        inv = investors(message[8:])
+        # cont = continue_after_BS(message[8:])
+        line_bot_api.reply_message(event.reply_token,[inv])
+    elif "歷年法人買賣超 " in message:
+        t_d = total_data(message[8:])
+        # cont = continue_after_BS(message[8:])
+        line_bot_api.reply_message(event.reply_token,[t_d])
+    elif "外資買賣超 " in message:
+        t_m = total_major(message[6:])
+        f_i = foreign_inv(message[6:],t_m)
+        # cont = continue_after_BS(message[6:])
+        line_bot_api.reply_message(event.reply_token,[f_i])
+    elif "投信買賣超 " in message:
+        t_m = total_major(message[6:])
+        c_i = credit_inv(message[6:],t_m)
+        # cont = continue_after_BS(message[6:])
+        line_bot_api.reply_message(event.reply_token,[c_i])
+    elif "自營商買賣超 " in message:
+        t_m = total_major(message[7:])
+        s_i = self_employed_inv(message[7:],t_m)
+        # cont = continue_after_BS(message[7:])
+        line_bot_api.reply_message(event.reply_token,[s_i])      
+    elif "三大法人買賣超 " in message:
+        t_m = total_major(message[8:])
+        m_i = major_inv(message[8:],t_m)
+        # cont = continue_after_BS(message[8:])
+        line_bot_api.reply_message(event.reply_token,[m_i])
         
-    # message = event.message.text
     
 
-# def Quickly_message(event):
-#     message = event.message.text
-#     if "大戶籌碼" in message:
-#         flex_message = TextSendMessage(text="請選擇要顯示的買賣超資訊",
-#                                     quick_reply=QuickReply(items=[
-#                                         QuickReplyButton(action=MessageAction(label="最新法人",text="最新法人買賣超" + message[5:])),
-#                                         QuickReplyButton(action=MessageAction(label="歷年法人",text="歷年法人買賣超" + message[5:])),
-#                                         QuickReplyButton(action=MessageAction(label="外資",text="外資買賣超" + message[5:])),
-#                                         QuickReplyButton(action=MessageAction(label="投信",text="投信買賣超" + message[5:])),
-#                                         QuickReplyButton(action=MessageAction(label="自營商",text="自營商買賣超" + message[5:])),
-#                                         QuickReplyButton(action=MessageAction(label="三大法人",text="三大法人買賣超" + message[5:]))
-#                                     ])
-#         )
-#         line_bot_api.reply_message(event.reply_token, flex_message)
-#     else:
-#         line_bot_api.reply_message(event.reply_token, TemplateSendMessage(message))
-        
+    elif "使用說明" in message:
+        mes = sendUse(message)
+        line_bot_api.reply_message(event.reply_token,mes)
 
 import os
 if __name__ == "__main__":

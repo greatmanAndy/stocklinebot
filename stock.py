@@ -5,9 +5,12 @@ from bs4 import BeautifulSoup
 from linebot.models import *
 import matplotlib.pyplot as plt
 import pyimgur
+import arrow
+import numpy as np
+import time
+import json
 
-
-# 股票名稱換代號
+#股票名稱換代號
 def stock_change(message):
     try:
         url = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
@@ -26,6 +29,7 @@ def stock_change(message):
         return(message)
     except:
         return("請輸入正確的股票名稱")
+
 #個股資訊
 def stock_id(message):
     if not re.match(r"[+-]?\d+$", message):
@@ -48,7 +52,8 @@ def stock_id(message):
         return mes
     except:
         return("請輸入正確的股票代號")
-# 個股新聞
+
+#個股新聞
 def one_new(message):
     if not re.match(r"[+-]?\d+$", message):
         message = stock_change(message)
@@ -376,6 +381,7 @@ def one_new(message):
             }
     )
     return mes
+
 #平均股利1      
 def contuin_divided(message):
     try:
@@ -395,6 +401,7 @@ def contuin_divided(message):
         return soup1
     except:
         return("請輸入正確的股票代號")
+
 #平均股利2
 def average_dividend(message):
     
@@ -435,7 +442,8 @@ def average_dividend(message):
         original_content_url= uploaded_image.link,
         preview_image_url= uploaded_image.link)
     return image_message
-# 歷年股利
+
+#歷年股利
 def year_dividend(message):
     if not re.match(r"[+-]?\d+$", message):
         message = stock_change(message)
@@ -497,6 +505,354 @@ def year_dividend(message):
         original_content_url= uploaded_image.link,
         preview_image_url= uploaded_image.link)
     return image_message
+
+#歷史股價資料
+def stock_l(message):
+    start = int(time.mktime(time.strptime(arrow.now().shift(months = 1).strftime("%Y-%m-%d"),"%Y-%m-%d")))
+    end = int(time.mktime(time.strptime(arrow.now().shift(months = -3).strftime("%Y-%m-%d"),"%Y-%m-%d")))
+    url = "https://ws.api.cnyes.com/ws/api/v1/charting/history?resolution=D&symbol=TWS:"+ message +":STOCK&from=" +str(start) + "&to="+str(end) + "&quote=1"
+    res = requests.get(url)
+    s = json.loads(res.text)
+    t = []
+    o = []
+    h = []
+    l = []
+    c = []
+    v = []
+    name = [t,o,h,l,c,v]
+    lis = ["t","o","h","l","c","v"]
+    for n,lis in zip(name,lis):
+        for d in (s["data"][lis]):
+            n.append(d)
+    df = pd.DataFrame({"日期":t,"開盤價":o,"最高價":h,"最低價":l,"收盤價":c,"成交量":v})    
+    for i in range(len(df)):
+        df["日期"][i] = time.strftime("%Y-%m-%d", time.localtime(df["日期"][i]))
+    df.index = pd.to_datetime(df["日期"])
+    df.index = df.index.format(formatter=lambda x: x.strftime('%Y-%m-%d')) 
+    df.drop("日期",axis = 1,inplace=True)
+    df = df.sort_index()
+    return df
+
+#最新三大法人買賣超
+def investors(message):
+    if not re.match(r"[+-]?\d+$", message):
+        message = stock_change(message)
+    url = "https://tw.stock.yahoo.com/quote/" + str(message) + "/institutional-trading"    
+    headers = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36"
+    }
+    res = requests.get(url,headers= headers)
+    # while str(res) != "<Response [200]>":
+    #     res = requests.get(url,headers= headers)
+    soup = BeautifulSoup(res.text,"html.parser")
+    soup1 = soup.find_all("div",{"style":"padding:0 12px 0 0"})[0:4]
+    name = []
+    buy = []
+    sell = []
+    b_s = []
+    contuin = []
+    for i in soup1:
+        soup2 = i.find_all("span")
+        name.append(soup2[0].text)
+        buy.append(soup2[1].text)
+        sell.append(soup2[2].text)
+        b_s.append(soup2[3].text)
+        contuin.append(soup2[4].text)
+    df = pd.DataFrame({"單位(張)":name,"買進":buy,"賣出":sell,"買賣超":b_s,"連續買賣超":contuin})
+    df.index = df["單位(張)"]
+    df.drop("單位(張)",axis = 1,inplace = True)
+    plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.figure('最新法人買賣超')            # 視窗名稱
+    plt.figure(dpi = 500)
+    ax = plt.axes(frame_on=False)# 不要額外框線
+    ax.xaxis.set_visible(False)  # 隱藏X軸刻度線
+    ax.yaxis.set_visible(False)  # 隱藏Y軸刻度線
+    pd.plotting.table(ax, df, loc='center')
+    plt.savefig(str(message) + "最新法人買賣超.png", bbox_inches = "tight")
+    CLIENT_ID = "0214ca80ccacfe5"
+    PATH = str(message) + "最新法人買賣超.png" #A Filepath to an image on your computer"
+    title = str(message) + "最新法人買賣超"
+    im = pyimgur.Imgur(CLIENT_ID)
+    uploaded_image = im.upload_image(PATH, title=title)
+    image_message = ImageSendMessage( 
+        original_content_url= uploaded_image.link,
+        preview_image_url= uploaded_image.link)
+    return image_message
+
+#歷年三大法人
+def total_major(message):
+    if not re.match(r"[+-]?\d+$", message):
+        message = stock_change(message)
+    url = "https://tw.stock.yahoo.com/quote/" + str(message) +"/institutional-trading"
+    headers = {
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36"
+    }
+    res = requests.get(url,headers = headers)
+    while str(res) != "<Response [200]>":
+        res = requests.get(url,headers= headers)
+    soup = BeautifulSoup(res.text,"html.parser")
+    soup1 = soup.find_all("div",{"style":"padding:0 12px 0 0"})[4:]
+    date = []
+    foreign_inv = []
+    credit = []
+    self_employed = []
+    total = []
+    foreign_sharehold = []
+    for i in soup1:
+        soup2 = i.find_all("div")[:7]
+        date.append(soup2[1].text)
+        foreign_inv.append(soup2[2].text)
+        credit.append(soup2[3].text)
+        self_employed.append(soup2[4].text)
+        total.append(soup2[5].text)
+        foreign_sharehold.append(soup2[6].text)
+    df = pd.DataFrame({"日期":date,"外資(張)":foreign_inv,"投信(張)":credit,"自營商(張)":self_employed,"合計(張)":total,"外資持股率(%)":foreign_sharehold})
+    df.index = pd.to_datetime(df["日期"])
+    df.index = df.index.format(formatter=lambda x: x.strftime('%Y-%m-%d')) 
+    df.drop("日期",axis = 1,inplace=True)
+    int_ = ["外資(張)","投信(張)","自營商(張)","合計(張)"]
+    for i in int_:
+        df[i] = df[i].apply(lambda x: x.replace(",","")).astype("int64")
+    df["外資持股率(%)"] = df["外資持股率(%)"].apply(lambda x: x.replace("%","")).astype(float)
+    return df
+
+#三大法人買賣超(資料)
+def total_data(message):
+    if not re.match(r"[+-]?\d+$", message):
+        message = stock_change(message)
+    df = total_major(message)
+    t = arrow.now().shift(months = -3).strftime("%Y-%m-%d")
+    df = df.loc[:t].sort_index()
+    plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.figure('三大法人買賣超')            # 視窗名稱
+    plt.figure(dpi = 500)
+    ax = plt.axes(frame_on=False)# 不要額外框線
+    ax.xaxis.set_visible(False)  # 隱藏X軸刻度線
+    ax.yaxis.set_visible(False)  # 隱藏Y軸刻度線
+    pd.plotting.table(ax, df, loc='center')
+    plt.savefig(str(message) + "三大法人.png", bbox_inches = "tight")
+    CLIENT_ID = "0214ca80ccacfe5"
+    PATH = str(message) + "三大法人.png" #A Filepath to an image on your computer"
+    title = str(message) + "三大法人"
+    im = pyimgur.Imgur(CLIENT_ID)
+    uploaded_image = im.upload_image(PATH, title=title)
+    image_message = ImageSendMessage( 
+        original_content_url= uploaded_image.link,
+        preview_image_url= uploaded_image.link)
+    return image_message
+
+#外資買賣超
+def foreign_inv(message,t_m):
+    if not re.match(r"[+-]?\d+$", message):
+        message = stock_change(message)
+    s_p = stock_l(message)
+    url_ = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
+    df_ = pd.read_html(requests.get(url_).text)[0]
+    df_ = df_.iloc[:,2:7]
+    df_.columns = df_.iloc[0,:]
+    df_ = df_[1:]
+    url2 = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=2&issuetype=4&industry_code=&Page=1&chklike=Y"
+    df_2 = pd.read_html(requests.get(url2).text)[0]
+    df_2 = df_2.iloc[:,2:7]
+    df_2.columns = df_2.iloc[0,:]
+    df_2 = df_2[1:]
+    df_3 = pd.concat([df_,df_2])
+    df_4 = df_3[df_3["有價證券代號"] == str(message)]
+    title_ = df_4.values[0,0] + " " + df_4.values[0,1] + "外資買賣"
+    t = arrow.now().shift(months = -3).strftime("%Y-%m-%d")
+    u = int(np.percentile(t_m["外資(張)"][t_m["外資(張)"] >= 0], [5]))
+    p = int(np.percentile(t_m["外資(張)"][t_m["外資(張)"] <= 0], [50]))
+    df2 = t_m.loc[:t].sort_index()
+    df3 = s_p[t:]
+    plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+    plt.rcParams['axes.unicode_minus'] = False
+    fig,ax = plt.subplots(figsize=(20, 5))
+    ax.grid(True) 
+    ax.set_title(title_,fontsize=15)
+    ax.set_xticks(range(0, len(df3.index), 5))
+    plt.xticks(rotation=45,fontsize=10)
+    ax.bar(df2.index,df2["外資(張)"],color = "dodgerblue",label = "外資買賣超")
+    ax.legend(loc = "upper left")
+    for a,b,c in zip(df2.index,df2["外資(張)"],range(len(df2.index))):
+        if c % 5 == 0 and b > 0:
+            plt.text(a, b +u , '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "r")
+        elif c % 5 == 0 and b < 0:
+            plt.text(a, b + p, '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "darkgreen")
+    ax2 = ax.twinx()
+    ax2.set_xticks(range(0, len(df3.index), 5))
+    ax2.plot(df3.index,df3["收盤價"],color = "orange",label = "股價")
+    ax2.legend(loc = "lower left")
+    plt.savefig(str(message) + "外資買賣超.png", bbox_inches = "tight")
+    CLIENT_ID = "1c11336262869d4"
+    PATH = str(message) + "外資買賣超.png" #A Filepath to an image on your computer"
+    title = str(message) + "外資買賣超"
+    im = pyimgur.Imgur(CLIENT_ID)
+    uploaded_image = im.upload_image(PATH, title=title)
+    image_message = ImageSendMessage( 
+        original_content_url= uploaded_image.link,
+        preview_image_url= uploaded_image.link)
+    return image_message
+
+#投信買賣超
+def credit_inv(message,t_m):
+    if not re.match(r"[+-]?\d+$", message):
+        message = stock_change(message)
+    s_p = stock_l(message)
+    url_ = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
+    df_ = pd.read_html(requests.get(url_).text)[0]
+    df_ = df_.iloc[:,2:7]
+    df_.columns = df_.iloc[0,:]
+    df_ = df_[1:]
+    url2 = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=2&issuetype=4&industry_code=&Page=1&chklike=Y"
+    df_2 = pd.read_html(requests.get(url2).text)[0]
+    df_2 = df_2.iloc[:,2:7]
+    df_2.columns = df_2.iloc[0,:]
+    df_2 = df_2[1:]
+    df_3 = pd.concat([df_,df_2])
+    df_4 = df_3[df_3["有價證券代號"] == str(message)]
+    title_ = df_4.values[0,0] + " " + df_4.values[0,1] + "投信買賣"
+    t = arrow.now().shift(months = -3).strftime("%Y-%m-%d")
+    u = int(np.percentile(t_m["投信(張)"][t_m["投信(張)"] >= 0], [5]))
+    p = int(np.percentile(t_m["投信(張)"][t_m["投信(張)"] <= 0], [50]))
+    df2 = t_m.loc[:t].sort_index()
+    df3 = s_p[t:]
+    plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+    plt.rcParams['axes.unicode_minus'] = False
+    fig,ax = plt.subplots(figsize=(20, 5)) 
+    plt.xticks(rotation=45,fontsize=10)
+    ax.set_title(title_,fontsize=15)
+    ax.set_xticks(range(0, len(df3.index), 5))
+    ax.bar(df2.index,df2["投信(張)"],color = "rosybrown",label = "投信買賣超")
+    ax.legend(loc = "upper left")
+    for a,b,c in zip(df2.index,df2["投信(張)"],range(len(df2.index))):
+        if c % 5 == 0 and b > 0:
+            plt.text(a, b +u , '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "r")
+        elif c % 5 == 0 and b < 0:
+            plt.text(a, b + p, '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "darkgreen")
+    ax.grid(True)
+    ax2 = ax.twinx()
+    ax2.set_xticks(range(0, len(df3.index), 5))
+    ax2.plot(df3.index,df3["收盤價"],color = "orange",label = "股價")
+    ax2.legend(loc = "lower left")
+    plt.savefig(str(message) + "投信買賣超.png", bbox_inches = "tight")
+    CLIENT_ID = "1c11336262869d4"
+    PATH = str(message) + "投信買賣超.png" #A Filepath to an image on your computer"
+    title = str(message) + "投信買賣超"
+    im = pyimgur.Imgur(CLIENT_ID)
+    uploaded_image = im.upload_image(PATH, title=title)
+    image_message = ImageSendMessage( 
+        original_content_url= uploaded_image.link,
+        preview_image_url= uploaded_image.link)
+    return image_message
+
+#自營商買賣超
+def self_employed_inv(message,t_m):
+    if not re.match(r"[+-]?\d+$", message):
+        message = stock_change(message)
+    s_p = stock_l(message)
+    url_ = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
+    df_ = pd.read_html(requests.get(url_).text)[0]
+    df_ = df_.iloc[:,2:7]
+    df_.columns = df_.iloc[0,:]
+    df_ = df_[1:]
+    url2 = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=2&issuetype=4&industry_code=&Page=1&chklike=Y"
+    df_2 = pd.read_html(requests.get(url2).text)[0]
+    df_2 = df_2.iloc[:,2:7]
+    df_2.columns = df_2.iloc[0,:]
+    df_2 = df_2[1:]
+    df_3 = pd.concat([df_,df_2])
+    df_4 = df_3[df_3["有價證券代號"] == str(message)]
+    title_ = df_4.values[0,0] + " " + df_4.values[0,1] + "自營商買賣超"
+    t = arrow.now().shift(months = -3).strftime("%Y-%m-%d")
+    u = int(np.percentile(t_m["自營商(張)"][t_m["自營商(張)"] >= 0], [5]))
+    p = int(np.percentile(t_m["自營商(張)"][t_m["自營商(張)"] <= 0], [50]))
+    df2 = t_m.loc[:t].sort_index()
+    df3 = s_p[t:]
+    plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+    plt.rcParams['axes.unicode_minus'] = False
+    fig,ax = plt.subplots(figsize=(15, 5)) 
+    plt.xticks(rotation=45,fontsize=10)
+    ax.set_title(title_,fontsize=15)
+    ax.set_xticks(range(0, len(df3.index), 5))
+    ax.bar(df2.index,df2["自營商(張)"],color = "orchid",label = "自營商買賣超")
+    ax.legend(loc = "upper left")
+    for a,b,c in zip(df2.index,df2["自營商(張)"],range(len(df2.index))):
+        if c % 5 == 0 and b > 0:
+            plt.text(a, b +u , '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "r")
+        elif c % 5 == 0 and b < 0:
+            plt.text(a, b + p, '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "darkgreen")
+    ax.grid(True)
+    ax2 = ax.twinx()
+    ax2.set_xticks(range(0, len(df3.index), 5))
+    ax2.plot(df3.index,df3["收盤價"],color = "orange",label = "股價")
+    ax2.legend(loc = "lower left")
+    plt.savefig(str(message) + "自營商買賣超.png", bbox_inches = "tight")
+    CLIENT_ID = "1c11336262869d4"
+    PATH = str(message) + "自營商買賣超.png" #A Filepath to an image on your computer"
+    title = str(message) + "自營商買賣超"
+    im = pyimgur.Imgur(CLIENT_ID)
+    uploaded_image = im.upload_image(PATH, title=title)
+    image_message = ImageSendMessage( 
+        original_content_url= uploaded_image.link,
+        preview_image_url= uploaded_image.link)
+    return image_message
+
+#三大法人買賣超
+def major_inv(message,t_m):
+    if not re.match(r"[+-]?\d+$", message):
+        message = stock_change(message)
+    s_p = stock_l(message)
+    url_ = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
+    df_ = pd.read_html(requests.get(url_).text)[0]
+    df_ = df_.iloc[:,2:7]
+    df_.columns = df_.iloc[0,:]
+    df_ = df_[1:]
+    url2 = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=2&issuetype=4&industry_code=&Page=1&chklike=Y"
+    df_2 = pd.read_html(requests.get(url2).text)[0]
+    df_2 = df_2.iloc[:,2:7]
+    df_2.columns = df_2.iloc[0,:]
+    df_2 = df_2[1:]
+    df_3 = pd.concat([df_,df_2])
+    df_4 = df_3[df_3["有價證券代號"] == str(message)]
+    title_ = df_4.values[0,0] + " " + df_4.values[0,1] + "三大法人買賣"
+    t = arrow.now().shift(months = -3).strftime("%Y-%m-%d")
+    u = int(np.percentile(t_m["合計(張)"][t_m["合計(張)"] >= 0], [5]))
+    p = int(np.percentile(t_m["合計(張)"][t_m["合計(張)"] <= 0], [50]))
+    df2 = t_m.loc[:t].sort_index()
+    df3 = s_p[t:]
+    plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+    plt.rcParams['axes.unicode_minus'] = False
+    fig,ax = plt.subplots(figsize=(15, 5)) 
+    plt.xticks(rotation=45,fontsize=10)
+    ax.set_title(title_,fontsize=15)
+    ax.set_xticks(range(0, len(df3.index), 5))
+    ax.bar(df2.index,df2["自營商(張)"],color = "orchid",label = "自營商買賣超")
+    ax.bar(df2.index,df2["投信(張)"],color = "rosybrown",label = "投信買賣超")
+    ax.bar(df2.index,df2["外資(張)"],color = "dodgerblue",label = "外資買賣超")
+    ax.legend(loc = "upper left")
+    for a,b,c in zip(df2.index,df2["合計(張)"],range(len(df2.index))):
+        if c % 5 == 0 and b > 0:
+            plt.text(a, b + u , '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "r")
+        elif c % 5 == 0 and b < 0:
+            plt.text(a, b + p, '%.0f' % b, ha='center', va= 'bottom',fontsize=10,color = "darkgreen")
+    ax.grid(True)
+    ax2 = ax.twinx()
+    ax2.set_xticks(range(0, len(df3.index), 5))
+    ax2.plot(df3.index,df3["收盤價"],color = "orange",label = "股價")
+    ax2.legend(loc = "lower left")
+    plt.savefig(str(message) + "三大法人買賣超.png", bbox_inches = "tight")
+    CLIENT_ID = "1c11336262869d4"
+    PATH = str(message) + "三大法人買賣超.png" #A Filepath to an image on your computer"
+    title = str(message) + "三大法人買賣超"
+    im = pyimgur.Imgur(CLIENT_ID)
+    uploaded_image = im.upload_image(PATH, title=title)
+    image_message = ImageSendMessage( 
+        original_content_url= uploaded_image.link,
+        preview_image_url= uploaded_image.link)
+    return image_message
+
 
 
 
