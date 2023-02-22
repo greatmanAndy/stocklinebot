@@ -7,6 +7,7 @@ import pyodbc
 
 
 
+
 #funtion 功能
 from blog import *
 from news import *
@@ -35,7 +36,7 @@ def callback():
     # get request body as text
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
-
+    # print(body)
     # handle webhook body
     try:
         handler.handle(body, signature)
@@ -123,15 +124,15 @@ def handle_message(event):
     elif "地雷檢測 " in message:
         check = select_1(message[4:])
         line_bot_api.reply_message(event.reply_token,check)
-    # elif "查詢關注 " in message:
-    #     find = find_list(message)
-    #     line_bot_api.reply_message(event.reply_token,find)
-    # elif "取消關注 " in message:
-    #     delete = stock_database_del(message[3:])
-    #     line_bot_api.reply_message(event.reply_token,delete)
+    elif re.match("查詢關注",message):
+        find = find_list()
+        line_bot_api.reply_message(event.reply_token,TextSendMessage(text=find))
+    elif "取消關注 " in message:
+        delete = stock_database_del(message[5:])
+        line_bot_api.reply_message(event.reply_token,TextSendMessage(text=delete))
     elif "關注" in message:
         add = stock_database_add(message[3:])
-        line_bot_api.reply_message(event.reply_token,add)   
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=add))   
     elif "使用說明" in message:
         mes = sendUse(message)
         line_bot_api.reply_message(event.reply_token,mes)
@@ -146,6 +147,8 @@ def handle_message(event):
     elif re.match("每周財經",message):
         mes = weekly_news()
         line_bot_api.reply_message(event.reply_token,mes)
+    elif re.match("退出",message):
+        line_bot_api.reply_message(event.reply_token,TextSendMessage("先休息囉!!!"))
     
   
     #列表
