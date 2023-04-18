@@ -11,7 +11,7 @@ WORKDIR $APP_HOME
 COPY . ./
 
 # Install production dependencies.
-RUN apt-get update && apt-get install -y libxml2-dev libxslt1-dev zlib1g-dev
+RUN apt-get update && apt-get install -y libxml2-dev libxslt1-dev zlib1g-dev build-essential
 
 RUN pip install --no-cache-dir -r requirements.txt
 
