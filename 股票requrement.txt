@@ -1,9 +1,0 @@
-前端:flask LineBot
-
-Server : flyio netilfyio
-
-股票 : twstock yifinance 
-
-股票圖表 : matipotalib
-
-資料分析: pandas mongodb selenium

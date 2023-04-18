@@ -808,6 +808,7 @@ def stock_new():
         ) 
     )
     return buttons_template_message
+
 def weekly_news():
     url3 = requests.get('https://pocketmoney.tw/articles/')
     sp3 = BeautifulSoup(url3.text, "html.parser")

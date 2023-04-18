@@ -5,13 +5,14 @@ from stock import  stock_change
 import re
 from bs4 import BeautifulSoup
 import emoji
+import traceback
 
 #新增股票到關注清單
-def stock_database_add(message):
+def stock_database_add(message, user_id):
     try:
         if not re.match(r"[+-]?\d+$", message):
             message = stock_change(message)
-            connection = mysql.connector.connect(host = "localhost",
+            connection = mysql.connector.connect(host = "35.229.143.23",
                                                 port = "3306",
                                                 user = "root",
                                                 password = "root",
@@ -30,28 +31,29 @@ def stock_database_add(message):
             df_2 = df_2[1:]
             df_3 = pd.concat([df_,df_2])
             df_4 = df_3[df_3["有價證券代號"] == message]
-            stock_i = df_4.values[0,0]
-            stock_n = df_4.values[0,1]
-            cursor.execute("SELECT * FROM `list`;")
+            stock_id = df_4.values[0,0]
+            stock_name = df_4.values[0,1]
+            cursor.execute("SELECT stock_id, stock_name FROM `stock_subscribe` WHERE user_id='%s';" % (user_id))
             records = cursor.fetchall()
             s_d = pd.DataFrame(records,columns=["股票代號","股票名稱"])
-            if str(stock_i) not in s_d["股票代號"].values:
-                cursor.execute("INSERT INTO `list` VALUES (%s,'%s');" % (stock_i,stock_n))
+            if str(stock_id) not in s_d["股票代號"].values:
+                cursor.execute("INSERT INTO `stock_subscribe` (stock_id,stock_name,user_id) VALUES ('%s','%s','%s');" % (stock_id,stock_name,user_id))
                 connection.commit()
                 cursor.close()
                 connection.close()
-                return stock_i + stock_n + " 已關注"
+                return stock_id + stock_name + " 已關注"
             else:
-                return stock_i + stock_n + " 已是關注股票"
-    except:
-        return "查無您輸入的" + message + "，請重新輸入確認"
+                return stock_id + stock_name + " 已是關注股票"
+    except Exception as e:
+        traceback.print_exc()
+        return "1查無您輸入的" + message + "，請重新輸入確認"
 
 #刪除股票清單中的股票
-def stock_database_del(message):
+def stock_database_del(message, user_id):
     try:
         if not re.match(r"[+-]?\d+$", message):
             message = stock_change(message)
-        connection = mysql.connector.connect(host = "localhost",
+        connection = mysql.connector.connect(host = "35.229.143.23",
                                             port = "3306",
                                             user = "root",
                                             password = "root",
@@ -70,32 +72,32 @@ def stock_database_del(message):
         df_2 = df_2[1:]
         df_3 = pd.concat([df_,df_2])
         df_4 = df_3[df_3["有價證券代號"] == message]
-        stock_i = df_4.values[0,0]
+        stock_id = df_4.values[0,0]
         stock_n = df_4.values[0,1]
-        cursor.execute("SELECT * FROM `list`;")
+        cursor.execute("SELECT stock_id, stock_name FROM `stock_subscribe` WHERE user_id='%s';" % (user_id))
         records = cursor.fetchall()
         s_d = pd.DataFrame(records,columns=["股票代號","股票名稱"])
-        if str(stock_i) in s_d["股票代號"].values:
-            cursor.execute("DELETE FROM `list` WHERE `id` = %s;" % (stock_i))
+        if str(stock_id) in s_d["股票代號"].values:
+            cursor.execute("DELETE FROM `stock_subscribe` WHERE `id` = '%s' AND `user_id` = '%s';" % (stock_id, user_id))
             connection.commit()
             cursor.close()
             connection.close()
-            return stock_i + stock_n + " 已取消關注"
+            return stock_id + stock_n + " 已取消關注"
         else:
-            return stock_i + stock_n + " 並非已關注股票"
+            return stock_id + stock_n + " 並非已關注股票"
     except:
         return "查無您輸入的" + message + "，請重新輸入"
 
 #查詢清單
-def find_list():
-    connection = mysql.connector.connect(host = "localhost",
+def find_list(user_id):
+    connection = mysql.connector.connect(host = "35.229.143.23",
                                         port = "3306",
                                         user = "root",
                                         password = "root",
                                         database = "stock_linebot",
                                         charset = 'utf8')
     cursor = connection.cursor()
-    cursor.execute("SELECT * FROM `list`;")
+    cursor.execute("SELECT stock_id, stock_name FROM `stock_subscribe` WHERE user_id='%s';" % (user_id))
     records = cursor.fetchall()
     s_d = pd.DataFrame(records,columns=["股票代號","股票名稱"])
     context = ""

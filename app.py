@@ -8,7 +8,7 @@ import pyodbc
 
 
 
-#funtion 功能
+#function 功能
 from blog import *
 from news import *
 from stock import *
@@ -25,7 +25,7 @@ line_bot_api = LineBotApi("uEUzpQi5I1Ch73qIaA3N31ptAWSG1sUQBDV5Yj4BLLBlRfCE3x62Z
 handler = WebhookHandler("7e256e9ecd70a48250de5cd57929a41b")
 @app.before_request
 def before_request():
-    connection_string = "Driver=SQL Server;Server=localhost;Database={0};Trusted_Connection=Yes;Database={0};" 
+    connection_string = "Driver=SQL Server;Server=35.229.143.23;Database={0};Trusted_Connection=Yes;Database={0};" 
     g.cnxn = pyodbc.connect(connection_string.format("linebot"), autocommit=True)
 
 @app.route("/callback", methods=['POST'])
@@ -36,7 +36,7 @@ def callback():
     # get request body as text
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
-    # print(body)
+    print(body)
     # handle webhook body
     try:
         handler.handle(body, signature)
@@ -48,6 +48,8 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage) 
 def handle_message(event):
     message = text = event.message.text
+    user_id = event.source.user_id
+    print("Message from userId: " + event.source.user_id)
     if "個股資訊" in message:
         stock_n = stock_id(message[5:])
         cont = continue_after(message[5:])
@@ -114,24 +116,28 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token,[d,cont])   
     elif "獲利能力 " in message:
         base = base_3(message)
-        line_bot_api.reply_message(event.reply_token,base)
+        cont = continue_after_Basic(message[5:])
+        line_bot_api.reply_message(event.reply_token,[base,cont])
     elif "償債能力 " in message:
         base = base_3(message)
-        line_bot_api.reply_message(event.reply_token,base) 
+        cont = continue_after_Basic(message[5:])
+        line_bot_api.reply_message(event.reply_token,[base,cont]) 
     elif "經營能力 " in message:
         base = base_3(message)
-        line_bot_api.reply_message(event.reply_token,base)
+        cont = continue_after_Basic(message[5:])
+        line_bot_api.reply_message(event.reply_token,[base,cont])
     elif "地雷檢測 " in message:
         check = select_1(message[4:])
+        cont = continue_after_Basic(message[5:])
         line_bot_api.reply_message(event.reply_token,check)
     elif re.match("查詢關注",message):
-        find = find_list()
+        find = find_list(user_id)
         line_bot_api.reply_message(event.reply_token,TextSendMessage(text=find))
     elif "取消關注 " in message:
-        delete = stock_database_del(message[5:])
+        delete = stock_database_del(message[5:], user_id)
         line_bot_api.reply_message(event.reply_token,TextSendMessage(text=delete))
     elif "關注" in message:
-        add = stock_database_add(message[3:])
+        add = stock_database_add(message[3:], user_id)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=add))   
     elif "使用說明" in message:
         mes = sendUse(message)
