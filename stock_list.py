@@ -15,7 +15,7 @@ def stock_database_add(message, user_id):
             connection = mysql.connector.connect(host = "35.229.143.23",
                                                 port = "3306",
                                                 user = "root",
-                                                password = "root",
+                                                password = "k&e5ry)'P&>E#8Z'",
                                                 database = "stock_linebot",
                                                 charset = 'utf8')
             cursor = connection.cursor()
@@ -56,7 +56,7 @@ def stock_database_del(message, user_id):
         connection = mysql.connector.connect(host = "35.229.143.23",
                                             port = "3306",
                                             user = "root",
-                                            password = "root",
+                                            password = "k&e5ry)'P&>E#8Z'",
                                             database = "stock_linebot",
                                             charset = 'utf8')
         cursor = connection.cursor()
@@ -93,7 +93,7 @@ def find_list(user_id):
     connection = mysql.connector.connect(host = "35.229.143.23",
                                         port = "3306",
                                         user = "root",
-                                        password = "root",
+                                        password = "k&e5ry)'P&>E#8Z'",
                                         database = "stock_linebot",
                                         charset = 'utf8')
     cursor = connection.cursor()
