@@ -78,7 +78,7 @@ def stock_database_del(message, user_id):
         records = cursor.fetchall()
         s_d = pd.DataFrame(records,columns=["股票代號","股票名稱"])
         if str(stock_id) in s_d["股票代號"].values:
-            cursor.execute("DELETE FROM `stock_subscribe` WHERE `id` = '%s' AND `user_id` = '%s';" % (stock_id, user_id))
+            cursor.execute("DELETE FROM `stock_subscribe` WHERE `stock_id` = '%s' AND `user_id` = '%s';" % (stock_id, user_id))
             connection.commit()
             cursor.close()
             connection.close()
