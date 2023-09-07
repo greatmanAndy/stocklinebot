@@ -21,8 +21,8 @@ from new_famous_book import *
 
 app = Flask(__name__)
 
-line_bot_api = LineBotApi("uEUzpQi5I1Ch73qIaA3N31ptAWSG1sUQBDV5Yj4BLLBlRfCE3x62ZdYjAP54MJbvn5rLNsp5WTrb5zhTwkhO58FhRJWiEoc87vE/xmQY1qVR1Qqh7yh1823IHPwwehRXMg3fkoFwC9U6rCaB/APMcwdB04t89/1O/w1cDnyilFU=")
-handler = WebhookHandler("7e256e9ecd70a48250de5cd57929a41b")
+line_bot_api = LineBotApi("")
+handler = WebhookHandler("")
 @app.before_request
 def before_request():
     connection_string = "Driver=SQL Server;Server=35.229.143.23;Database={0};Trusted_Connection=Yes;Database={0};" 
